@@ -1505,6 +1505,7 @@ def format_help(help):
     help = help.replace('  run', str(crayons.blue('  run')))
     help = help.replace('  shell', str(crayons.blue('  shell', bold=True)))
     help = help.replace('  update', str(crayons.yellow('  update')))
+    help = help.replace('  package', str(crayons.green('  graph')))
 
     additional_help = """
 Usage Examples:
@@ -1524,6 +1525,9 @@ Usage Examples:
    $ {7}
 
    Install a local setup.py into your virtual environment/Pipfile:
+   $ {5}
+
+   Package for AWS Lambda / Elasticbeanstalk:
    $ {5}
 
 Commands:""".format(
@@ -2604,6 +2608,48 @@ def update(ctx, dev=False, three=None, python=None, dry_run=False, bare=False, d
             )
 
 
+@click.command(short_help=u"Packages code and dependencies for deployment on cloud computing services or air gapped devices.")
+@click.argument('path', default=False)
+def package(virtualenv=False, bare=True, path=None):
+    """Packages site-dependencies and code in ZIP file for uploading to AWS / GCloud"""
+    #No need to have this imported unless exporting a ZIP archive.
+    import zipfile
+
+    if not virtualenv:
+        location = project.pipfile_location
+
+        # Shorten the virtual display of the path to the virtualenv.
+        if not bare:
+            location = shorten_path(location)
+
+        if not location:
+            click.echo(
+                'No Pipfile present at project home. Consider running '
+                '{0} first to automatically generate a Pipfile for you.'
+                ''.format(crayons.green('`pipenv install`')), err=True)
+        elif not bare:
+            click.echo(
+                'Pipfile found at {0}.\n  Considering this to be the project home.'
+                ''.format(crayons.green(location)), err=True)
+            pass
+        else:
+            click.echo(project.project_directory)
+
+    else:
+        location = project.virtualenv_location
+
+        if not bare:
+            click.echo('Virtualenv location: {0}'.format(crayons.green(location)), err=True)
+        else:
+            click.echo(location)
+
+    if path:
+        path = path
+    else:
+        path = project.project_directory
+
+    click.echo('Exporting ZIP archive to ' + path)
+
 # Install click commands.
 cli.add_command(graph)
 cli.add_command(install)
@@ -2614,6 +2660,7 @@ cli.add_command(check)
 cli.add_command(shell)
 cli.add_command(run)
 cli.add_command(run_open)
+cli.add_command(package)
 
 # Only invoke the "did you mean" when an argument wasn't passed (it breaks those).
 if '-' not in ''.join(sys.argv) and len(sys.argv) > 1:
